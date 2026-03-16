@@ -6,8 +6,8 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
@@ -17,8 +17,8 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
-import javax.swing.*;
-import java.util.Vector;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
@@ -48,35 +48,64 @@ public class Main extends ApplicationAdapter {
     float bucketCurrentY = 0;     // Posición actual (para animación)
     boolean isJumping = false;    // Indica si está saltando
 
+    private int dropsCollected = 0; // Contador de gotas recogidas
+    private BitmapFont font;         // Fuente para mostrar el texto
+
     @Override
     public void create() {
-        backgroundTexture = new Texture("background.png");
-        bucketTexture = new Texture("bucket.png");
-        dropTexture = new Texture("drop.png");
+        try {
+            backgroundTexture = new Texture("background.png");
+            bucketTexture = new Texture("bucket.png");
+            dropTexture = new Texture("drop.png");
 
-        dropSound=Gdx.audio.newSound(Gdx.files.internal("drop.mp3"));
-        music=Gdx.audio.newMusic(Gdx.files.internal("music.mp3"));
+            dropSound=Gdx.audio.newSound(Gdx.files.internal("drop.mp3"));
+            music=Gdx.audio.newMusic(Gdx.files.internal("music.mp3"));
 
-        spriteBatch=new SpriteBatch();
-        viewport=new FitViewport(8,5);
+            spriteBatch=new SpriteBatch();
+            viewport=new FitViewport(8,5);
 
-        bucketSprite=new Sprite(bucketTexture);
-        bucketSprite.setSize(1,1);
+            bucketSprite=new Sprite(bucketTexture);
+            bucketSprite.setSize(1,1);
 
-        touchPos=new Vector2();
-        dropSprites=new Array<>();
+            touchPos=new Vector2();
+            dropSprites=new Array<>();
 
-        bucketRectangle=new Rectangle();
-        dropRectangle=new Rectangle();
+            bucketRectangle=new Rectangle();
+            dropRectangle=new Rectangle();
 
-        music.setLooping(true);
-        music.setVolume(.5f);
-        music.play();
+            music.setLooping(true);
+            music.setVolume(.5f);
+            music.play();
 
-        bucketSprite.setSize(1, 1);
-        bucketTargetY = 0; // Suponiendo que empieza en Y=0
-        bucketCurrentY = 0;
-        bucketSprite.setY(bucketCurrentY);
+            bucketSprite.setSize(1, 1);
+            bucketTargetY = 0; // Suponiendo que empieza en Y=0
+            bucketCurrentY = 0;
+            bucketSprite.setY(bucketCurrentY);
+
+            // --- NUEVA FUENTE CON FREETYPE ---
+            if (Gdx.files.internal("fonts/arial.ttf").exists()) {
+                FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/arial.ttf"));
+                FreeTypeFontParameter parameter = new FreeTypeFontParameter();
+                parameter.size = 6; // Tamaño en píxeles (ya es pequeño)
+                parameter.color = Color.WHITE;
+                parameter.borderWidth = 1f; // Borde opcional para legibilidad
+                parameter.borderColor = Color.BLACK; // Mejora visibilidad sobre fondos
+                parameter.borderStraight = true;
+
+                parameter.shadowColor = new Color(0f, 0f, 0f, 0.75f);
+                font = generator.generateFont(parameter);
+                generator.dispose();
+            } else {
+                Gdx.app.error("Font", "Fuente 'fonts/arial.ttf' no encontrada, usando fuente por defecto");
+                font = new BitmapFont(); // Fallback
+                font.getData().setScale(0.15f); // Escala muy pequeña para BitmapFont
+            }
+            // ------------------------------------
+
+        } catch (Exception e) {
+            Gdx.app.error("Main", "Error al crear el juego", e);
+            Gdx.app.exit();
+        }
 
     }
     @Override
@@ -93,7 +122,6 @@ public class Main extends ApplicationAdapter {
 
     private void logic() {
         float worldWidth=viewport.getWorldWidth();
-        float worlHeight=viewport.getWorldHeight();
 
         float bucketWidth = bucketSprite.getWidth();
         float bucketHeight= bucketSprite.getHeight();
@@ -136,6 +164,7 @@ public class Main extends ApplicationAdapter {
             }else if (bucketRectangle.overlaps(dropRectangle)) {
                 dropSprites.removeIndex(i);
                 dropSound.play();
+                dropsCollected++;
                 startJump(); // ¡Saltito aquí!
             }
         }
@@ -145,7 +174,6 @@ public class Main extends ApplicationAdapter {
             dropTimer=0;
             createDroplet();
         }
-
 
     }
 
@@ -189,8 +217,17 @@ public class Main extends ApplicationAdapter {
         }
 
 
-        spriteBatch.end();
+        // Dibujar el contador encima de todo
+        font.setColor(Color.WHITE);
+        font.getData().setScale(0.1f);
+        font.draw(
+            spriteBatch,
+            "GOTAS: " + dropsCollected,
+            0.2f,  // margen izquierdo
+            worldHeight - 0.2f  // desde arriba
+        );
 
+        spriteBatch.end();
     }
 
     private void createDroplet(){
@@ -209,6 +246,6 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void dispose() {
-
+        font.dispose();
     }
 }
