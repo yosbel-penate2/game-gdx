@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
@@ -56,6 +57,7 @@ public class Main extends ApplicationAdapter {
 
     private int dropsCollected = 0; // Contador de gotas recogidas
     private BitmapFont font;         // Fuente para mostrar el texto
+    private GlyphLayout glyphLayout;
 
     @Override
     public void create() {
@@ -253,31 +255,28 @@ public class Main extends ApplicationAdapter {
     private void draw() {
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
         viewport.apply();
         spriteBatch.setProjectionMatrix(viewport.getCamera().combined);
         spriteBatch.begin();
 
-        float worldWidth = viewport.getWorldWidth();
-        float worldHeight=viewport.getWorldHeight();
-
-        spriteBatch.draw(backgroundTexture, 0,0, worldWidth, worldHeight);
+        // fondo + objetos...
+        spriteBatch.draw(backgroundTexture, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
         bucketSprite.draw(spriteBatch);
+        for (Sprite dropSprite : dropSprites) dropSprite.draw(spriteBatch);
 
-        for (Sprite dropSprite: dropSprites
-             ) {
-            dropSprite.draw(spriteBatch);
-        }
+        // HUD texto (sobre la pantalla, no sobre una “pared” de caídas)
+        String hud = "GOTAS: " + dropsCollected;
+        glyphLayout.setText(font, hud);
 
+        float pad = 0.12f;
+        float x = pad;
+        float y = viewport.getWorldHeight() - pad;
 
-        // Dibujar el contador encima de todo
-        font.setColor(Color.WHITE);
-        font.getData().setScale(0.1f);
-        font.draw(
-            spriteBatch,
-            "GOTAS: " + dropsCollected,
-            0.2f,  // margen izquierdo
-            worldHeight - 0.2f  // desde arriba
-        );
+        // opcional: fondo semitransparente para no confundirlo con el sprite
+        // si quieres, usa ShapeRenderer para dibujar un rectángulo detrás
+
+        font.draw(spriteBatch, glyphLayout, x, y);
 
         spriteBatch.end();
     }
