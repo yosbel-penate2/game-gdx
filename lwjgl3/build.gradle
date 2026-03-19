@@ -32,14 +32,18 @@ if (JavaVersion.current().isJava9Compatible()) {
 dependencies {
   implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
   implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+
   implementation "com.badlogicgames.gdx:gdx-controllers:$gdxVersion"
   implementation "com.badlogicgames.gdx:gdx-controllers-desktop:$gdxVersion"
+  implementation "com.badlogicgames.gdx:gdx-controllers-lwjgl3:$gdxVersion"
+
   implementation project(':core')
 
   api "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
   api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
   api "com.badlogicgames.gdx:gdx-controllers:$gdxVersion"
   api "com.badlogicgames.gdx:gdx-controllers-desktop:$gdxVersion"
+  api "com.badlogicgames.gdx:gdx-controllers-lwjgl3:$gdxVersion"
   api "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
   if(enableGraalNative == 'true') {
     implementation "io.github.berstanio:gdx-svmhelper-backend-lwjgl3:$graalHelperVersion"
