@@ -101,6 +101,7 @@ public class Main extends ApplicationAdapter {
                 font.getData().setScale(0.15f); // Escala muy pequeña para BitmapFont
             }
             // ------------------------------------
+            // No se añade listener de gdx-controllers porque la dependencia no está disponible para 1.13.1.
 
         } catch (Exception e) {
             Gdx.app.error("Main", "Error al crear el juego", e);
@@ -196,7 +197,6 @@ public class Main extends ApplicationAdapter {
             viewport.unproject(touchPos);
             bucketSprite.setCenterX(touchPos.x);
         }
-
     }
 
     private void draw() {

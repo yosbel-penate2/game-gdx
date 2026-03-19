@@ -1,4 +1,3 @@
-
 buildscript {
   repositories {
     gradlePluginPortal()
@@ -33,13 +32,18 @@ if (JavaVersion.current().isJava9Compatible()) {
 dependencies {
   implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
   implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+  // gdx-controllers 1.13.1 no está publicado en Maven Central; si necesitas soporte de mandos, usa una versión de gdx compatible o una implementación manual.
+  // implementation "com.badlogicgames.gdx:gdx-controllers:$gdxVersion"
+  // implementation "com.badlogicgames.gdx:gdx-controllers-desktop:$gdxVersion:natives-desktop"
   implementation project(':core')
 
   api "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
   api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
   api "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
-
-
+  // gdx-controllers 1.13.1 no está publicado en Maven Central; el proyecto actualmente no lo requiere en el código principal,
+  // por lo que se comenta para evitar fallos de resolución.
+  // implementation "com.badlogicgames.gdx:gdx-controllers:$gdxVersion"
+  // implementation "com.badlogicgames.gdx:gdx-controllers-desktop:$gdxVersion:natives-desktop"
   if(enableGraalNative == 'true') {
     implementation "io.github.berstanio:gdx-svmhelper-backend-lwjgl3:$graalHelperVersion"
 
