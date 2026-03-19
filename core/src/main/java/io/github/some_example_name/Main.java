@@ -17,6 +17,11 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
+import com.badlogic.gdx.controllers.Controller;
+import com.badlogic.gdx.controllers.Controllers;
+import com.badlogic.gdx.controllers.ControllerAdapter;
+import com.badlogic.gdx.controllers.PovDirection;
+
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 
@@ -72,6 +77,38 @@ public class Main extends ApplicationAdapter {
 
             bucketRectangle=new Rectangle();
             dropRectangle=new Rectangle();
+
+            Controllers.addListener(new ControllerAdapter() {
+                @Override
+                public boolean axisMoved(Controller controller, int axisIndex, float value) {
+                    // e.g. axis 0 es la palanca izquierda X en muchos mapeos
+                    if (axisIndex == 0 && Math.abs(value) > 0.2f) {
+                        bucketSprite.translateX(value * 5f * Gdx.graphics.getDeltaTime());
+                        return true;
+                    }
+                    return false;
+                }
+
+                @Override
+                public boolean povMoved(Controller controller, int povIndex, PovDirection value) {
+                    if (povIndex == 0) {
+                        if (value == PovDirection.west) bucketSprite.translateX(-4f * Gdx.graphics.getDeltaTime());
+                        else if (value == PovDirection.east) bucketSprite.translateX(4f * Gdx.graphics.getDeltaTime());
+                        return true;
+                    }
+                    return false;
+                }
+
+                @Override
+                public boolean buttonDown(Controller controller, int buttonCode) {
+                    // PS3 botón X/abajo suele mapearse en 0 o 1 según driver
+                    if (buttonCode == 0 || buttonCode == 1) {
+                        startJump();
+                        return true;
+                    }
+                    return false;
+                }
+            });
 
             music.setLooping(true);
             music.setVolume(.5f);
@@ -190,6 +227,21 @@ public class Main extends ApplicationAdapter {
             bucketSprite.translateX(speed*delta);
         }else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)){
             bucketSprite.translateX(-speed*delta);
+        }
+
+        for (Controller controller : Controllers.getControllers()) {
+            if (controller.getPovCount() > 0) {
+                PovDirection pov = controller.getPov(0);
+                if (pov == PovDirection.west) bucketSprite.translateX(-speed*delta);
+                else if (pov == PovDirection.east) bucketSprite.translateX(speed*delta);
+            }
+
+            if (controller.getAxisCount() > 0) {
+                float axisX = controller.getAxis(0); // left stick x
+                if (Math.abs(axisX) > 0.2f) {
+                    bucketSprite.translateX(axisX * speed * delta);
+                }
+            }
         }
 
         if (Gdx.input.isTouched()) {
