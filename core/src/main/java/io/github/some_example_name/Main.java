@@ -6,6 +6,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
@@ -230,17 +231,15 @@ public class Main extends ApplicationAdapter {
         }
 
         for (Controller controller : Controllers.getControllers()) {
-            if (controller.getPovCount() > 0) {
-                PovDirection pov = controller.getPov(0);
+            PovDirection pov = controller.getPov(0);
+            if (pov != null) {
                 if (pov == PovDirection.west) bucketSprite.translateX(-speed*delta);
                 else if (pov == PovDirection.east) bucketSprite.translateX(speed*delta);
             }
 
-            if (controller.getAxisCount() > 0) {
-                float axisX = controller.getAxis(0); // left stick x
-                if (Math.abs(axisX) > 0.2f) {
-                    bucketSprite.translateX(axisX * speed * delta);
-                }
+            float axisX = controller.getAxis(0); // left stick x
+            if (Math.abs(axisX) > 0.2f) {
+                bucketSprite.translateX(axisX * speed * delta);
             }
         }
 
@@ -252,7 +251,8 @@ public class Main extends ApplicationAdapter {
     }
 
     private void draw() {
-        ScreenUtils.clear(Color.BLACK);
+        Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         viewport.apply();
         spriteBatch.setProjectionMatrix(viewport.getCamera().combined);
         spriteBatch.begin();

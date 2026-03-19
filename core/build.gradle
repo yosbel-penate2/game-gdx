@@ -6,8 +6,10 @@ dependencies {
   api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
   api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
 
+  implementation "com.badlogicgames.gdx:gdx-controllers:$gdxVersion"
+  // si hay backend en core no, pero es seguro
+}
 
-  if(enableGraalNative == 'true') {
-    implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
-  }
+if(enableGraalNative == 'true') {
+  implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
 }
