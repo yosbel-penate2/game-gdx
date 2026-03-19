@@ -78,6 +78,8 @@ public class Main extends ApplicationAdapter {
             touchPos=new Vector2();
             dropSprites=new Array<>();
 
+            glyphLayout = new GlyphLayout();
+
             bucketRectangle=new Rectangle();
             dropRectangle=new Rectangle();
 
