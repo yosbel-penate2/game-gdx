@@ -19,6 +19,12 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
+
 import com.badlogic.gdx.controllers.Controller;
 import com.badlogic.gdx.controllers.Controllers;
 import com.badlogic.gdx.controllers.ControllerAdapter;
@@ -37,6 +43,9 @@ public class Main extends ApplicationAdapter {
 
     SpriteBatch spriteBatch;
     FitViewport viewport;
+
+    Stage stage;
+    Skin skin;
 
     Sprite bucketSprite;
 
@@ -143,7 +152,29 @@ public class Main extends ApplicationAdapter {
                 font.getData().setScale(0.15f); // Escala muy pequeña para BitmapFont
             }
             // ------------------------------------
-            // No se añade listener de gdx-controllers porque la dependencia no está disponible para 1.13.1.
+            // Configurar Scene2d UI para la barra superior
+            stage = new Stage(new ScreenViewport());
+            Gdx.input.setInputProcessor(stage);
+
+            if (Gdx.files.internal("skin/uiskin.json").exists()) {
+                skin = new Skin(Gdx.files.internal("skin/uiskin.json"));
+            } else {
+                // Fallback: usa BitmapFont + color random si no está el skin
+                skin = new Skin();
+                Label.LabelStyle labelStyle = new Label.LabelStyle(font, Color.WHITE);
+                skin.add("default", labelStyle);
+            }
+
+            Table hudTable = new Table();
+            hudTable.setFillParent(true);
+            hudTable.top().left();
+            hudTable.pad(10);
+
+            Label dropsLabel = new Label("GOTAS: " + dropsCollected, skin);
+            dropsLabel.setName("dropsLabel");
+            hudTable.add(dropsLabel).left();
+
+            stage.addActor(hudTable);
 
         } catch (Exception e) {
             Gdx.app.error("Main", "Error al crear el juego", e);
@@ -267,20 +298,17 @@ public class Main extends ApplicationAdapter {
         bucketSprite.draw(spriteBatch);
         for (Sprite dropSprite : dropSprites) dropSprite.draw(spriteBatch);
 
-        // HUD texto (sobre la pantalla, no sobre una “pared” de caídas)
-        String hud = "GOTAS: " + dropsCollected;
-        glyphLayout.setText(font, hud);
-
-        float pad = 0.12f;
-        float x = pad;
-        float y = viewport.getWorldHeight() - pad;
-
-        // opcional: fondo semitransparente para no confundirlo con el sprite
-        // si quieres, usa ShapeRenderer para dibujar un rectángulo detrás
-
-        font.draw(spriteBatch, glyphLayout, x, y);
-
+        // No dibujar HUD manual; usa Scene2d UI
         spriteBatch.end();
+
+        // Actualizar etiqueta del contador
+        Label dropsLabel = stage.getRoot().findActor("dropsLabel");
+        if (dropsLabel != null) {
+            dropsLabel.setText("GOTAS: " + dropsCollected);
+        }
+
+        stage.act(Gdx.graphics.getDeltaTime());
+        stage.draw();
     }
 
     private void createDroplet(){
@@ -299,6 +327,14 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void dispose() {
-        font.dispose();
+        if (font != null) font.dispose();
+        if (spriteBatch != null) spriteBatch.dispose();
+        if (backgroundTexture != null) backgroundTexture.dispose();
+        if (bucketTexture != null) bucketTexture.dispose();
+        if (dropTexture != null) dropTexture.dispose();
+        if (dropSound != null) dropSound.dispose();
+        if (music != null) music.dispose();
+        if (stage != null) stage.dispose();
+        if (skin != null) skin.dispose();
     }
 }
