@@ -149,7 +149,7 @@ public class Main extends ApplicationAdapter {
             } else {
                 Gdx.app.error("Font", "Fuente 'fonts/arial.ttf' no encontrada, usando fuente por defecto");
                 font = new BitmapFont(); // Fallback
-                font.getData().setScale(0.5f); // Escala aumentada para BitmapFont
+                font.getData().setScale(1.5f); // Escala aumentada para BitmapFont
             }
             // ------------------------------------
             // Configurar Scene2d UI para la barra superior
