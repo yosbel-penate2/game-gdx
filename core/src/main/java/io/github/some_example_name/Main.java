@@ -68,6 +68,10 @@ public class Main extends ApplicationAdapter {
     private BitmapFont font;         // Fuente para mostrar el texto
     private GlyphLayout glyphLayout;
 
+    private float baseDropTimer = 1f;      // Base time between drops (seconds)
+    private float minDropTimer = 0.2f;     // Minimum time between drops (fastest)
+    private float difficultyScale = 0.95f; // How quickly difficulty increases (lower = faster scaling)
+
     @Override
     public void create() {
         try {
@@ -174,6 +178,11 @@ public class Main extends ApplicationAdapter {
             dropsLabel.setName("dropsLabel");
             hudTable.add(dropsLabel).left();
 
+            // Add after creating the dropsLabel
+            Label difficultyLabel = new Label("DIFFICULTY: NORMAL", skin);
+            difficultyLabel.setName("difficultyLabel");
+            hudTable.add(difficultyLabel).padLeft(20);
+
             stage.addActor(hudTable);
 
         } catch (Exception e) {
@@ -243,12 +252,39 @@ public class Main extends ApplicationAdapter {
             }
         }
 
-        dropTimer+=delta;
-        if (dropTimer > 1f) {
-            dropTimer=0;
+        dropTimer += delta;
+
+        // Calculate current drop interval based on score
+        float currentDropInterval = calculateDropInterval();
+
+        if (dropTimer > currentDropInterval) {
+            dropTimer = 0;
             createDroplet();
         }
 
+    }
+
+    /**
+     * Calculate the current time between drops based on collected droplets
+     * Higher score = faster drops (shorter interval)
+    */
+    private float calculateDropInterval() {
+        // Option 1: Exponential decay (drops get faster quickly at first, then plateau)
+        // Example: at 0 drops: 1.0s, at 10 drops: ~0.6s, at 50 drops: ~0.24s
+        float interval = baseDropTimer * (float)Math.pow(difficultyScale, dropsCollected);
+        
+        // Option 2: Linear scaling (steadily increases difficulty)
+        // float interval = baseDropTimer - (dropsCollected / 100f);
+        
+        // Option 3: Step-based scaling (difficulty increases at specific milestones)
+        // float interval = baseDropTimer;
+        // if (dropsCollected > 50) interval = 0.3f;
+        // else if (dropsCollected > 30) interval = 0.5f;
+        // else if (dropsCollected > 15) interval = 0.7f;
+        // else if (dropsCollected > 5) interval = 0.85f;
+        
+        // Clamp to prevent drops from becoming too fast
+        return Math.max(minDropTimer, interval);
     }
 
     private void startJump() {
@@ -307,6 +343,21 @@ public class Main extends ApplicationAdapter {
             dropsLabel.setText("GOTAS: " + dropsCollected);
         }
 
+        // In the draw() method, after updating dropsLabel:
+        Label difficultyLabel = stage.getRoot().findActor("difficultyLabel");
+        if (difficultyLabel != null) {
+            float currentInterval = calculateDropInterval();
+            String difficultyText;
+            
+            if (currentInterval <= 0.3f) difficultyText = "INSANE";
+            else if (currentInterval <= 0.5f) difficultyText = "HARD";
+            else if (currentInterval <= 0.7f) difficultyText = "MEDIUM";
+            else if (currentInterval <= 0.85f) difficultyText = "EASY";
+            else difficultyText = "NORMAL";
+            
+            difficultyLabel.setText("DIFFICULTY: " + difficultyText);
+        }
+
         stage.act(Gdx.graphics.getDeltaTime());
         stage.draw();
     }
@@ -322,6 +373,7 @@ public class Main extends ApplicationAdapter {
         dropSprite.setX(MathUtils.random(0f, worldWidth-dropWidth));
         dropSprite.setY(worldHeight);
         dropSprites.add(dropSprite);
+
 
     }
 
