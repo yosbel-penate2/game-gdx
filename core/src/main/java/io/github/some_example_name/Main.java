@@ -3,10 +3,12 @@ package io.github.some_example_name;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputMultiplexer; // AÑADIR ESTA IMPORTACIÓN
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Pixmap; // AÑADIR ESTA IMPORTACIÓN
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
@@ -16,13 +18,13 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable; // AÑADIR ESTA IMPORTACIÓN
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
 import com.badlogic.gdx.controllers.Controller;
@@ -33,7 +35,6 @@ import com.badlogic.gdx.controllers.PovDirection;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
     Texture backgroundTexture;
     Texture bucketTexture;
@@ -58,142 +59,162 @@ public class Main extends ApplicationAdapter {
     Rectangle bucketRectangle;
     Rectangle dropRectangle;
 
-    float bucketJumpPower = 0.2f; // Cuánto sube la cubeta
-    float bucketJumpSpeed = 4f;   // Velocidad del salto
-    float bucketTargetY = 0;      // Posición Y base
-    float bucketCurrentY = 0;     // Posición actual (para animación)
-    boolean isJumping = false;    // Indica si está saltando
+    float bucketJumpPower = 0.2f;
+    float bucketJumpSpeed = 4f;
+    float bucketTargetY = 0;
+    float bucketCurrentY = 0;
+    boolean isJumping = false;
 
-    private int dropsCollected = 0; // Contador de gotas recogidas
-    private BitmapFont font;         // Fuente para mostrar el texto
+    private int dropsCollected = 0;
+    private BitmapFont font;
     private GlyphLayout glyphLayout;
 
-    private float baseDropTimer = 1f;      // Base time between drops (seconds)
-    private float minDropTimer = 0.2f;     // Minimum time between drops (fastest)
-    private float difficultyScale = 0.95f; // How quickly difficulty increases (lower = faster scaling)
+    private float baseDropTimer = 1f;
+    private float minDropTimer = 0.2f;
+    private float difficultyScale = 0.95f;
 
-    @Override
-    public void create() {
-        try {
-            backgroundTexture = new Texture("background.png");
-            bucketTexture = new Texture("bucket.png");
-            dropTexture = new Texture("drop.png");
 
-            dropSound=Gdx.audio.newSound(Gdx.files.internal("drop.mp3"));
-            music=Gdx.audio.newMusic(Gdx.files.internal("music.mp3"));
+@Override
+public void create() {
+    try {
+        backgroundTexture = new Texture("background.png");
+        bucketTexture = new Texture("bucket.png");
+        dropTexture = new Texture("drop.png");
 
-            spriteBatch=new SpriteBatch();
-            viewport=new FitViewport(8,5);
+        dropSound = Gdx.audio.newSound(Gdx.files.internal("drop.mp3"));
+        music = Gdx.audio.newMusic(Gdx.files.internal("music.mp3"));
 
-            bucketSprite=new Sprite(bucketTexture);
-            bucketSprite.setSize(1,1);
+        spriteBatch = new SpriteBatch();
+        viewport = new FitViewport(8, 5);
 
-            touchPos=new Vector2();
-            dropSprites=new Array<>();
+        bucketSprite = new Sprite(bucketTexture);
+        bucketSprite.setSize(1, 1);
 
-            glyphLayout = new GlyphLayout();
+        touchPos = new Vector2();
+        dropSprites = new Array<>();
+        glyphLayout = new GlyphLayout();
+        bucketRectangle = new Rectangle();
+        dropRectangle = new Rectangle();
 
-            bucketRectangle=new Rectangle();
-            dropRectangle=new Rectangle();
-
-            Controllers.addListener(new ControllerAdapter() {
-                @Override
-                public boolean axisMoved(Controller controller, int axisIndex, float value) {
-                    // e.g. axis 0 es la palanca izquierda X en muchos mapeos
-                    if (axisIndex == 0 && Math.abs(value) > 0.2f) {
-                        bucketSprite.translateX(value * 5f * Gdx.graphics.getDeltaTime());
-                        return true;
-                    }
-                    return false;
+        // Configurar controles - ESTO YA FUNCIONA POR SÍ SOLO
+        Controllers.addListener(new ControllerAdapter() {
+            @Override
+            public boolean axisMoved(Controller controller, int axisIndex, float value) {
+                if (axisIndex == 0 && Math.abs(value) > 0.2f) {
+                    bucketSprite.translateX(value * 5f * Gdx.graphics.getDeltaTime());
+                    return true;
                 }
-
-                @Override
-                public boolean povMoved(Controller controller, int povIndex, PovDirection value) {
-                    if (povIndex == 0) {
-                        if (value == PovDirection.west) bucketSprite.translateX(-4f * Gdx.graphics.getDeltaTime());
-                        else if (value == PovDirection.east) bucketSprite.translateX(4f * Gdx.graphics.getDeltaTime());
-                        return true;
-                    }
-                    return false;
-                }
-
-                @Override
-                public boolean buttonDown(Controller controller, int buttonCode) {
-                    // PS3 botón X/abajo suele mapearse en 0 o 1 según driver
-                    if (buttonCode == 0 || buttonCode == 1) {
-                        startJump();
-                        return true;
-                    }
-                    return false;
-                }
-            });
-
-            music.setLooping(true);
-            music.setVolume(.5f);
-            music.play();
-
-            bucketSprite.setSize(1, 1);
-            bucketTargetY = 0; // Suponiendo que empieza en Y=0
-            bucketCurrentY = 0;
-            bucketSprite.setY(bucketCurrentY);
-
-            // --- NUEVA FUENTE CON FREETYPE ---
-            if (Gdx.files.internal("fonts/arial.ttf").exists()) {
-                FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/arial.ttf"));
-                FreeTypeFontParameter parameter = new FreeTypeFontParameter();
-                parameter.size = 24; // Tamaño aumentado en píxeles
-                parameter.color = Color.WHITE;
-                parameter.borderWidth = 1f; // Borde opcional para legibilidad
-                parameter.borderColor = Color.BLACK; // Mejora visibilidad sobre fondos
-                parameter.borderStraight = true;
-
-                parameter.shadowColor = new Color(0f, 0f, 0f, 0.75f);
-                font = generator.generateFont(parameter);
-                generator.dispose();
-            } else {
-                Gdx.app.error("Font", "Fuente 'fonts/arial.ttf' no encontrada, usando fuente por defecto");
-                font = new BitmapFont(); // Fallback
-                font.getData().setScale(1.5f); // Escala aumentada para BitmapFont
-            }
-            // ------------------------------------
-            // Configurar Scene2d UI para la barra superior
-            stage = new Stage(new ScreenViewport());
-            Gdx.input.setInputProcessor(stage);
-
-            if (Gdx.files.internal("skin/uiskin.json").exists()) {
-                skin = new Skin(Gdx.files.internal("skin/uiskin.json"));
-            } else {
-                // Fallback: usa BitmapFont + color random si no está el skin
-                skin = new Skin();
-                Label.LabelStyle labelStyle = new Label.LabelStyle(font, Color.WHITE);
-                skin.add("default", labelStyle);
+                return false;
             }
 
-            Table hudTable = new Table();
-            hudTable.setFillParent(true);
-            hudTable.top().left();
-            hudTable.pad(10);
+            @Override
+            public boolean povMoved(Controller controller, int povIndex, PovDirection value) {
+                if (povIndex == 0) {
+                    if (value == PovDirection.west) 
+                        bucketSprite.translateX(-4f * Gdx.graphics.getDeltaTime());
+                    else if (value == PovDirection.east) 
+                        bucketSprite.translateX(4f * Gdx.graphics.getDeltaTime());
+                    return true;
+                }
+                return false;
+            }
 
-            Label dropsLabel = new Label("GOTAS: " + dropsCollected, skin);
-            dropsLabel.setName("dropsLabel");
-            hudTable.add(dropsLabel).left();
+            @Override
+            public boolean buttonDown(Controller controller, int buttonCode) {
+                if (buttonCode == 0 || buttonCode == 1) {
+                    startJump();
+                    return true;
+                }
+                return false;
+            }
+        });
 
-            // Add after creating the dropsLabel
-            Label difficultyLabel = new Label("DIFFICULTY: NORMAL", skin);
-            difficultyLabel.setName("difficultyLabel");
-            hudTable.add(difficultyLabel).padLeft(20);
+        music.setLooping(true);
+        music.setVolume(.5f);
+        music.play();
 
-            stage.addActor(hudTable);
+        bucketTargetY = 0;
+        bucketCurrentY = 0;
+        bucketSprite.setY(bucketCurrentY);
 
-        } catch (Exception e) {
-            Gdx.app.error("Main", "Error al crear el juego", e);
-            Gdx.app.exit();
+        // Configurar fuente
+        if (Gdx.files.internal("fonts/arial.ttf").exists()) {
+            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/arial.ttf"));
+            FreeTypeFontParameter parameter = new FreeTypeFontParameter();
+            parameter.size = 24;
+            parameter.color = Color.WHITE;
+            parameter.borderWidth = 1f;
+            parameter.borderColor = Color.BLACK;
+            parameter.borderStraight = true;
+            parameter.shadowColor = new Color(0f, 0f, 0f, 0.75f);
+            font = generator.generateFont(parameter);
+            generator.dispose();
+        } else {
+            Gdx.app.error("Font", "Fuente no encontrada, usando fuente por defecto");
+            font = new BitmapFont();
+            font.getData().setScale(1.5f);
+        }
+        
+        // Configurar Stage y UI - CORREGIDO: No usar getInputListener()
+        stage = new Stage(new ScreenViewport());
+        Gdx.input.setInputProcessor(stage);
+
+        // Configurar Skin
+        if (Gdx.files.internal("skin/uiskin.json").exists()) {
+            skin = new Skin(Gdx.files.internal("skin/uiskin.json"));
+        } else {
+            skin = new Skin();
+            Label.LabelStyle labelStyle = new Label.LabelStyle(font, Color.WHITE);
+            skin.add("default", labelStyle);
         }
 
+        // Asegurar que el drawable "white" existe
+        if (skin.getDrawable("white") == null) {
+            Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+            pixmap.setColor(Color.WHITE);
+            pixmap.fill();
+            Texture texture = new Texture(pixmap);
+            TextureRegionDrawable drawable = new TextureRegionDrawable(texture);
+            skin.add("white", drawable);
+            pixmap.dispose();
+        }
+
+        // Crear HUD con fondo
+        Table hudContainer = new Table();
+        hudContainer.setFillParent(true);
+        hudContainer.top().left();
+        hudContainer.pad(10);
+
+        Table indicatorBar = new Table();
+        indicatorBar.setBackground(skin.newDrawable("white", new Color(0, 0, 0, 0.7f)));
+        indicatorBar.pad(10, 15, 10, 15);
+
+        Label dropsLabel = new Label("GOTAS: " + dropsCollected, skin);
+        dropsLabel.setName("dropsLabel");
+
+        Label difficultyLabel = new Label("DIFICULTAD: NORMAL", skin);
+        difficultyLabel.setName("difficultyLabel");
+
+        indicatorBar.add(dropsLabel).left();
+        indicatorBar.add(difficultyLabel).padLeft(20);
+        hudContainer.add(indicatorBar).left().top();
+        stage.addActor(hudContainer);
+
+        Gdx.app.log("Main", "Juego iniciado correctamente!");
+
+    } catch (Exception e) {
+        Gdx.app.error("Main", "Error al crear el juego", e);
+        e.printStackTrace();
+        Gdx.app.exit();
     }
+}
+
     @Override
-    public void resize(int width, int height){
-        viewport.update(width, height,  true);
+    public void resize(int width, int height) {
+        viewport.update(width, height, true);
+        if (stage != null) {
+            stage.getViewport().update(width, height, true);
+        }
     }
 
     @Override
@@ -204,116 +225,91 @@ public class Main extends ApplicationAdapter {
     }
 
     private void logic() {
-        float worldWidth=viewport.getWorldWidth();
-
+        float worldWidth = viewport.getWorldWidth();
         float bucketWidth = bucketSprite.getWidth();
-        float bucketHeight= bucketSprite.getHeight();
+        float bucketHeight = bucketSprite.getHeight();
 
-        bucketSprite.setX(MathUtils.clamp(bucketSprite.getX(),0, worldWidth-bucketWidth));
+        bucketSprite.setX(MathUtils.clamp(bucketSprite.getX(), 0, worldWidth - bucketWidth));
 
-        float delta=Gdx.graphics.getDeltaTime();
+        float delta = Gdx.graphics.getDeltaTime();
 
-        bucketRectangle.set(bucketSprite.getX(), bucketRectangle.getY(), bucketWidth, bucketHeight);
-
+        // CORREGIDO: Usar bucketSprite.getY() en lugar de bucketRectangle.getY()
+        bucketRectangle.set(bucketSprite.getX(), bucketSprite.getY(), bucketWidth, bucketHeight);
 
         // Animación del saltito
         if (isJumping) {
-            bucketCurrentY += bucketJumpSpeed * Gdx.graphics.getDeltaTime();
+            bucketCurrentY += bucketJumpSpeed * delta;
             if (bucketCurrentY >= bucketTargetY + bucketJumpPower) {
                 isJumping = false;
             }
         } else {
-            bucketCurrentY -= bucketJumpSpeed * Gdx.graphics.getDeltaTime();
+            bucketCurrentY -= bucketJumpSpeed * delta;
             if (bucketCurrentY <= bucketTargetY) {
                 bucketCurrentY = bucketTargetY;
             }
         }
         bucketSprite.setY(bucketCurrentY);
 
-        // Actualizar rectángulo de colisión
+        // Actualizar rectángulo de colisión después del salto
         bucketRectangle.set(bucketSprite.getX(), bucketSprite.getY(), bucketWidth, bucketHeight);
 
+        // Procesar gotas
+        for (int i = dropSprites.size - 1; i >= 0; i--) {
+            Sprite dropSprite = dropSprites.get(i);
+            float dropWidth = dropSprite.getWidth();
+            float dropHeight = dropSprite.getHeight();
 
-        for (int i = dropSprites.size -1; i>=0; i--){
-            Sprite dropSprite=dropSprites.get(i);
-            float dropWidth=dropSprite.getWidth();
-            float dropHeight=dropSprite.getHeight();
-
-            dropSprite.translateY((-2f*delta));
+            dropSprite.translateY(-2f * delta);
             dropRectangle.set(dropSprite.getX(), dropSprite.getY(), dropWidth, dropHeight);
 
-            if (dropSprite.getY()< -dropWidth) {
+            if (dropSprite.getY() < -dropWidth) {
                 dropSprites.removeIndex(i);
-            }else if (bucketRectangle.overlaps(dropRectangle)) {
+            } else if (bucketRectangle.overlaps(dropRectangle)) {
                 dropSprites.removeIndex(i);
-                dropSound.play();
+                if (dropSound != null) dropSound.play();
                 dropsCollected++;
-                startJump(); // ¡Saltito aquí!
+                startJump();
             }
         }
 
+        // Crear nuevas gotas con dificultad dinámica
         dropTimer += delta;
-
-        // Calculate current drop interval based on score
         float currentDropInterval = calculateDropInterval();
 
         if (dropTimer > currentDropInterval) {
             dropTimer = 0;
             createDroplet();
         }
-
     }
 
-    /**
-     * Calculate the current time between drops based on collected droplets
-     * Higher score = faster drops (shorter interval)
-    */
     private float calculateDropInterval() {
-        // Option 1: Exponential decay (drops get faster quickly at first, then plateau)
-        // Example: at 0 drops: 1.0s, at 10 drops: ~0.6s, at 50 drops: ~0.24s
-        float interval = baseDropTimer * (float)Math.pow(difficultyScale, dropsCollected);
-        
-        // Option 2: Linear scaling (steadily increases difficulty)
-        // float interval = baseDropTimer - (dropsCollected / 100f);
-        
-        // Option 3: Step-based scaling (difficulty increases at specific milestones)
-        // float interval = baseDropTimer;
-        // if (dropsCollected > 50) interval = 0.3f;
-        // else if (dropsCollected > 30) interval = 0.5f;
-        // else if (dropsCollected > 15) interval = 0.7f;
-        // else if (dropsCollected > 5) interval = 0.85f;
-        
-        // Clamp to prevent drops from becoming too fast
+        float interval = baseDropTimer * (float) Math.pow(difficultyScale, dropsCollected);
         return Math.max(minDropTimer, interval);
     }
 
     private void startJump() {
-        isJumping = true;
+        if (!isJumping) {
+            isJumping = true;
+            bucketTargetY = bucketSprite.getY(); // CORREGIDO: Establecer target Y
+            bucketCurrentY = bucketTargetY;
+        }
     }
 
     private void input() {
-        float speed=4f;
-        float delta=Gdx.graphics.getDeltaTime();
+        float speed = 4f;
+        float delta = Gdx.graphics.getDeltaTime();
 
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)){
-            bucketSprite.translateX(speed*delta);
-        }else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)){
-            bucketSprite.translateX(-speed*delta);
+        // Controles de teclado
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            bucketSprite.translateX(speed * delta);
+        } else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+            bucketSprite.translateX(-speed * delta);
         }
 
-        for (Controller controller : Controllers.getControllers()) {
-            PovDirection pov = controller.getPov(0);
-            if (pov != null) {
-                if (pov == PovDirection.west) bucketSprite.translateX(-speed*delta);
-                else if (pov == PovDirection.east) bucketSprite.translateX(speed*delta);
-            }
+        // REMOVIDO: Controles duplicados de controller (ya están en ControllerAdapter)
+        // El ControllerAdapter ya maneja los controles, no necesitas procesarlos aquí
 
-            float axisX = controller.getAxis(0); // left stick x
-            if (Math.abs(axisX) > 0.2f) {
-                bucketSprite.translateX(axisX * speed * delta);
-            }
-        }
-
+        // Controles táctiles
         if (Gdx.input.isTouched()) {
             touchPos.set(Gdx.input.getX(), Gdx.input.getY());
             viewport.unproject(touchPos);
@@ -329,52 +325,53 @@ public class Main extends ApplicationAdapter {
         spriteBatch.setProjectionMatrix(viewport.getCamera().combined);
         spriteBatch.begin();
 
-        // fondo + objetos...
-        spriteBatch.draw(backgroundTexture, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
+        if (backgroundTexture != null) {
+            spriteBatch.draw(backgroundTexture, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
+        }
         bucketSprite.draw(spriteBatch);
-        for (Sprite dropSprite : dropSprites) dropSprite.draw(spriteBatch);
+        for (Sprite dropSprite : dropSprites) {
+            dropSprite.draw(spriteBatch);
+        }
 
-        // No dibujar HUD manual; usa Scene2d UI
         spriteBatch.end();
 
-        // Actualizar etiqueta del contador
-        Label dropsLabel = stage.getRoot().findActor("dropsLabel");
-        if (dropsLabel != null) {
-            dropsLabel.setText("GOTAS: " + dropsCollected);
-        }
+        // Actualizar UI
+        if (stage != null) {
+            Label dropsLabel = stage.getRoot().findActor("dropsLabel");
+            if (dropsLabel != null) {
+                dropsLabel.setText("GOTAS: " + dropsCollected);
+            }
 
-        // In the draw() method, after updating dropsLabel:
-        Label difficultyLabel = stage.getRoot().findActor("difficultyLabel");
-        if (difficultyLabel != null) {
-            float currentInterval = calculateDropInterval();
-            String difficultyText;
-            
-            if (currentInterval <= 0.3f) difficultyText = "INSANE";
-            else if (currentInterval <= 0.5f) difficultyText = "HARD";
-            else if (currentInterval <= 0.7f) difficultyText = "MEDIUM";
-            else if (currentInterval <= 0.85f) difficultyText = "EASY";
-            else difficultyText = "NORMAL";
-            
-            difficultyLabel.setText("DIFFICULTY: " + difficultyText);
-        }
+            Label difficultyLabel = stage.getRoot().findActor("difficultyLabel");
+            if (difficultyLabel != null) {
+                float currentInterval = calculateDropInterval();
+                String difficultyText;
+                
+                if (currentInterval <= 0.3f) difficultyText = "INSANE";
+                else if (currentInterval <= 0.5f) difficultyText = "HARD";
+                else if (currentInterval <= 0.7f) difficultyText = "MEDIUM";
+                else if (currentInterval <= 0.85f) difficultyText = "EASY";
+                else difficultyText = "NORMAL";
+                
+                difficultyLabel.setText("DIFICULTAD: " + difficultyText);
+            }
 
-        stage.act(Gdx.graphics.getDeltaTime());
-        stage.draw();
+            stage.act(Gdx.graphics.getDeltaTime());
+            stage.draw();
+        }
     }
 
-    private void createDroplet(){
-        float dropWidth=1;
-        float dropHeight=1;
-        float worldWidth=viewport.getWorldWidth();
-        float worldHeight=viewport.getWorldHeight();
+    private void createDroplet() {
+        float dropWidth = 1;
+        float dropHeight = 1;
+        float worldWidth = viewport.getWorldWidth();
+        float worldHeight = viewport.getWorldHeight();
 
-        Sprite dropSprite=new Sprite(dropTexture);
+        Sprite dropSprite = new Sprite(dropTexture);
         dropSprite.setSize(dropWidth, dropHeight);
-        dropSprite.setX(MathUtils.random(0f, worldWidth-dropWidth));
+        dropSprite.setX(MathUtils.random(0f, worldWidth - dropWidth));
         dropSprite.setY(worldHeight);
         dropSprites.add(dropSprite);
-
-
     }
 
     @Override
