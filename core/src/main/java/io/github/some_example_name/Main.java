@@ -137,7 +137,7 @@ public class Main extends ApplicationAdapter {
             if (Gdx.files.internal("fonts/arial.ttf").exists()) {
                 FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/arial.ttf"));
                 FreeTypeFontParameter parameter = new FreeTypeFontParameter();
-                parameter.size = 6; // Tamaño en píxeles (ya es pequeño)
+                parameter.size = 24; // Tamaño aumentado en píxeles
                 parameter.color = Color.WHITE;
                 parameter.borderWidth = 1f; // Borde opcional para legibilidad
                 parameter.borderColor = Color.BLACK; // Mejora visibilidad sobre fondos
@@ -149,7 +149,7 @@ public class Main extends ApplicationAdapter {
             } else {
                 Gdx.app.error("Font", "Fuente 'fonts/arial.ttf' no encontrada, usando fuente por defecto");
                 font = new BitmapFont(); // Fallback
-                font.getData().setScale(0.15f); // Escala muy pequeña para BitmapFont
+                font.getData().setScale(0.5f); // Escala aumentada para BitmapFont
             }
             // ------------------------------------
             // Configurar Scene2d UI para la barra superior
